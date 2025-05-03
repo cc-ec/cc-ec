@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispatch Rule Engine UI - Tags</title> <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --light-gray: #f8f9fa;
+            --medium-gray: #dee2e6;
+            --dark-gray: #343a40;
+            --border-radius: 0.25rem;
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: var(--spacing-md);
+            background-color: var(--light-gray);
+            color: var(--dark-gray);
+            line-height: 1.5;
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+            margin-bottom: var(--spacing-md);
+        }
+
+        button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+            margin-left: var(--spacing-sm);
+        }
+
+        button.primary { background-color: var(--primary-color); color: white; }
+        button.primary:hover { background-color: #0056b3; }
+        button.secondary { background-color: var(--secondary-color); color: white; }
+        button.secondary:hover { background-color: #5a6268; }
+        button.danger { background-color: #dc3545; color: white; }
+        button.danger:hover { background-color: #c82333; }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="search"],
+        select {
+            padding: var(--spacing-sm);
+            border: 1px solid var(--medium-gray);
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            margin-right: var(--spacing-sm);
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .controls-area, .simulation-area {
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .controls-area {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             flex-wrap: wrap;
+        }
+         .controls-area input[type="search"] {
+             flex-grow: 1;
+             max-width: 400px;
+             margin-right: var(--spacing-md);
+         }
+
+        .rule-list-area { margin-top: var(--spacing-md); }
+
+        .sequence-level-group {
+            border: 1px solid var(--medium-gray);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-lg);
+            background-color: #fff;
+        }
+
+        .sequence-level-header {
+            background-color: var(--light-gray);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-weight: bold;
+            border-bottom: 1px solid var(--medium-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sequence-level-header .level-title {
+             cursor: pointer;
+             display: flex;
+             align-items: center;
+        }
+        .sequence-level-header:hover { background-color: #e9ecef; }
+        .sequence-level-header .toggle-icon { transition: transform 0.2s ease; display: inline-block; margin-left: var(--spacing-xs);}
+        .sequence-level-group.collapsed .toggle-icon { transform: rotate(-90deg); }
+        .sequence-level-header label {
+             font-weight: normal;
+             font-size: 0.85em;
+             cursor: pointer;
+             margin-left: auto;
+             padding-left: var(--spacing-md);
+        }
+        .sequence-level-header input[type="checkbox"] {
+             margin-right: var(--spacing-xs);
+             vertical-align: middle;
+        }
+
+
+        .rules-container {
+            padding: var(--spacing-md);
+            min-height: 30px;
+            transition: padding 0.3s ease, max-height 0.3s ease;
+            overflow: hidden;
+        }
+        .sequence-level-group.collapsed .rules-container { padding-top: 0; padding-bottom: 0; max-height: 0; border-top: none; }
+
+        .rule-row {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-sm);
+            border: 1px dashed transparent;
+            margin-bottom: var(--spacing-sm);
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: background-color 0.2s ease;
+        }
+        .rule-row:last-child { margin-bottom: 0; }
+        .rule-row.inactive { opacity: 0.6; background-color: #f8f9fa; }
+        .rule-row.filtered-out { display: none; }
+
+        .rule-row .drag-handle { cursor: grab; margin-right: var(--spacing-md); color: var(--secondary-color); padding: var(--spacing-xs); }
+        .rule-row .drag-handle:active { cursor: grabbing; }
+
+        .rule-details { flex-grow: 1; margin-right: var(--spacing-md); font-size: 0.9rem; }
+        .rule-details strong { color: var(--primary-color); }
+        .rule-details .tag { /* Renamed from .skill-tag */
+            display: inline-block;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 2px 6px;
+            border-radius: var(--border-radius);
+            font-size: 0.8rem;
+            margin-left: var(--spacing-xs);
+        }
+
+        .rule-actions button { margin-left: var(--spacing-xs); padding: var(--spacing-xs) var(--spacing-sm); font-size: 0.8rem; }
+
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: var(--spacing-lg); border: 1px solid #888; width: 80%; max-width: 700px; border-radius: var(--border-radius); position: relative; }
+        .modal-content h3 { margin-bottom: var(--spacing-lg); }
+        .modal-close { color: #aaa; position: absolute; top: var(--spacing-sm); right: var(--spacing-md); font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-close:hover, .modal-close:focus { color: black; text-decoration: none; }
+
+        .form-group { margin-bottom: var(--spacing-md); }
+        .form-group label { display: block; margin-bottom: var(--spacing-xs); font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; }
+        .form-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); }
+
+
+        /* SortableJS styles */
+        .sortable-ghost { opacity: 0.4; background-color: #cce5ff; border: 1px dashed var(--primary-color); }
+        .sortable-drag { opacity: 0.9 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+        /* Simulation */
+         .simulation-area .inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            align-items: end;
+         }
+         .simulation-area .inputs label { font-weight: bold; margin-bottom: var(--spacing-xs); display: block; }
+         .simulation-area .inputs select { width: 100%; }
+         .simulation-area .inputs button { grid-column: -2 / -1; }
+
+
+         .simulation-area .results {
+             margin-top: var(--spacing-md);
+             padding: var(--spacing-sm);
+             background-color: var(--light-gray);
+             border-radius: var(--border-radius);
+             min-height: 2em;
+         }
+         .simulation-area .results .tag { /* Renamed from .skill-tag */
+             display: inline-block;
+             background-color: var(--primary-color);
+             color: white;
+             padding: 2px 6px;
+             border-radius: var(--border-radius);
+             font-size: 0.9rem;
+             margin-right: var(--spacing-xs);
+         }
+
+         .help-text {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-sm);
+            background-color: #e9ecef;
+            border-left: 4px solid var(--secondary-color);
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+         }
+         .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Dispatch Rule Engine - Tags</h1> <p class="help-text">
+            <strong>Logic:</strong> Rules assign tags based on order attributes. Use 'Any' if a condition should match all values for that attribute. Rules are processed by Sequence Level (lowest number first). All rules within a level are checked against the order.
+            If <strong>any</strong> rule matches in a level, required tags from <strong>all</strong> matching rules in that level are determined.
+            Processing behaviour depends on the level's 'Stop' setting: if checked, processing stops; if unchecked, processing continues to the next level, accumulating tags.
+            If no rules match in a level, processing always continues. Drag rules between levels to change their sequence.
+        </p>
+
+        <div class="controls-area">
+             <div>
+                <label for="search-input" class="visually-hidden">Filter rules:</label>
+                <input type="search" id="search-input" placeholder="Filter by conditions or tags..."> </div>
+            <button id="add-rule-btn" class="primary">+ Add New Rule</button>
+        </div>
+
+        <div id="rule-list-area" class="rule-list-area">
+            </div>
+
+        <div class="simulation-area">
+            <h2>Simulate Order Tag Assignment</h2> <div class="inputs">
+                 <div>
+                     <label for="sim-site">Site:</label>
+                     <select id="sim-site">
+                         <option value="MF">MF</option>
+                         <option value="RA">RA</option>
+                         <option value="CR">CR</option>
+                         <option value="GL">GL</option>
+                         <option value="MW">MW</option>
+                         <option value="NE">NE</option>
+                         <option value="EF">EF</option>
+                         <option value="WF">WF</option>
+                         <option value="LS">LS</option>
+                     </select>
+                 </div>
+                 <div>
+                     <label for="sim-service">Service:</label>
+                     <select id="sim-service">
+                          <option value="STAT">STAT</option>
+                         <option value="Priority">Priority</option>
+                         <option value="CGT">CGT</option>
+                         <option value="Route">Route</option>
+                         <option value="Rush">Rush</option>
+                     </select>
+                 </div>
+                 <div>
+                     <label for="sim-customer">Customer:</label>
+                     <select id="sim-customer">
+                           <option value="101710">101710</option>
+                         <option value="101711">101711</option>
+                         <option value="101714">101714</option>
+                         <option value="101716">101716</option>
+                         <option value="101722">101722</option>
+                         <option value="101727">101727</option>
+                     </select>
+                 </div>
+                <div>
+                    <label for="sim-customer-group">Customer Group:</label>
+                    <select id="sim-customer-group">
+                         <option value="Marken">Marken</option>
+                        <option value="Option Care">Option Care</option>
+                        <option value="McKesson">McKesson</option>
+                        <option value="Mercury">Mercury</option>
+                    </select>
+                </div>
+                 <div>
+                     <label for="sim-vehicle-type">Vehicle Type:</label>
+                     <select id="sim-vehicle-type">
+                         <option value="Walking">Walking</option>
+                         <option value="Car">Car</option>
+                         <option value="Bicycle">Bicycle</option>
+                         <option value="Sprinter Van">Sprinter Van</option>
+                         <option value="Box Truck">Box Truck</option>
+                         <option value="<unspecified>">&lt;unspecified&gt;</option>
+                     </select>
+                 </div>
+                <div>
+                    <label for="sim-order-priority">Order Priority:</label>
+                    <select id="sim-order-priority">
+                         <option value="VIP">VIP</option>
+                        <option value="Normal">Normal</option>
+                        <option value="Low">Low</option>
+                        <option value="<unspecified>">&lt;unspecified&gt;</option>
+                    </select>
+                </div>
+
+                <button id="run-simulation-btn" class="secondary">Run Simulation</button>
+             </div>
+             <div class="results">
+                 <strong>Resulting Tags:</strong> <span id="simulation-results"></span> </div>
+        </div>
+    </div>
+
+    <div id="rule-editor-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h3 id="modal-title">Add New Rule</h3>
+            <form id="rule-form">
+                <input type="hidden" id="rule-id">
+
+                <div class="form-group">
+                    <label for="rule-sequence-level">Sequence Level (Lower numbers run first):</label>
+                    <input type="number" id="rule-sequence-level" min="1" step="1" required value="1">
+                </div>
+
+                <fieldset class="form-group">
+                     <legend>Conditions (Use 'Any' for wildcard)</legend>
+                     <div class="form-columns">
+                        <div>
+                            <label for="rule-site">Site:</label>
+                            <select id="rule-site">
+                                <option value="Any">Any</option>
+                                <option value="MF">MF</option>
+                                <option value="RA">RA</option>
+                                <option value="CR">CR</option>
+                                <option value="GL">GL</option>
+                                <option value="MW">MW</option>
+                                <option value="NE">NE</option>
+                                <option value="EF">EF</option>
+                                <option value="WF">WF</option>
+                                <option value="LS">LS</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="rule-service">Service:</label>
+                            <select id="rule-service">
+                                <option value="Any">Any</option>
+                                <option value="STAT">STAT</option>
+                                <option value="Priority">Priority</option>
+                                <option value="CGT">CGT</option>
+                                <option value="Route">Route</option>
+                                <option value="Rush">Rush</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="rule-customer">Customer:</label>
+                            <select id="rule-customer">
+                                <option value="Any">Any</option>
+                                <option value="101710">101710</option>
+                                <option value="101711">101711</option>
+                                <option value="101714">101714</option>
+                                <option value="101716">101716</option>
+                                <option value="101722">101722</option>
+                                <option value="101727">101727</option>
+                            </select>
+                        </div>
+                       <div>
+                           <label for="rule-customer-group">Customer Group:</label>
+                           <select id="rule-customer-group">
+                               <option value="Any">Any</option>
+                               <option value="Marken">Marken</option>
+                               <option value="Option Care">Option Care</option>
+                               <option value="McKesson">McKesson</option>
+                               <option value="Mercury">Mercury</option>
+                           </select>
+                       </div>
+                        <div>
+                            <label for="rule-vehicle-type">Vehicle Type:</label>
+                            <select id="rule-vehicle-type">
+                                <option value="Any">Any</option>
+                                <option value="Walking">Walking</option>
+                                <option value="Car">Car</option>
+                                <option value="Bicycle">Bicycle</option>
+                                <option value="Sprinter Van">Sprinter Van</option>
+                                <option value="Box Truck">Box Truck</option>
+                            </select>
+                        </div>
+                       <div>
+                           <label for="rule-order-priority">Order Priority:</label>
+                           <select id="rule-order-priority">
+                               <option value="Any">Any</option>
+                               <option value="VIP">VIP</option>
+                               <option value="Normal">Normal</option>
+                               <option value="Low">Low</option>
+                           </select>
+                       </div>
+                    </div>
+                </fieldset>
+
+                <div class="form-group">
+                    <label for="rule-tags-select">Assign Tags (Hold Ctrl/Cmd to select multiple):</label>
+                    <select multiple id="rule-tags-select" size="6" style="height: auto;">
+                        <option value="Marken_Gold">Marken_Gold</option>
+                        <option value="TSA">TSA</option>
+                        <option value="Option_Care">Option_Care</option>
+                        <option value="Marken_BMS">Marken_BMS</option>
+                        <option value="Marken_Kite">Marken_Kite</option>
+                        <option value="Marken_S12_Breyanzi">Marken_S12_Breyanzi</option>
+                        <option value="Mercury_Orientation_Basic">Mercury_Orientation_Basic</option>
+                        <option value="Dangerous_Goods">Dangerous_Goods</option>
+                        <option value="Dry_Ice">Dry_Ice</option>
+                    </select>
+                     <small>Select one or more tags required by this rule.</small>
+                </div>
+
+                <button type="submit" class="primary">Save Rule</button>
+                <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const ruleListArea = document.getElementById('rule-list-area');
+        const modal = document.getElementById('rule-editor-modal');
+        const ruleForm = document.getElementById('rule-form');
+        const modalTitle = document.getElementById('modal-title');
+        const searchInput = document.getElementById('search-input');
+        const simulationResultsEl = document.getElementById('simulation-results');
+        // Renamed from skillsSelectElement
+        const tagsSelectElement = document.getElementById('rule-tags-select');
+
+        let rules = [];
+        let collapsedStates = {};
+        let levelStopSettings = {};
+        let sortableInstances = [];
+
+        const conditionKeys = ['site', 'service', 'customer', 'customerGroup', 'vehicleType', 'orderPriority'];
+        const optionalOrderKeys = ['vehicleType', 'orderPriority'];
+        const unspecifiedRuleMeansAnyKeys = ['site', 'service', 'customer', 'customerGroup', 'vehicleType', 'orderPriority'];
+        const conditionElementIds = {
+            site: 'site', service: 'service', customer: 'customer',
+            customerGroup: 'customer-group', vehicleType: 'vehicle-type', orderPriority: 'order-priority'
+        };
+
+        // --- Data Persistence ---
+        function saveStateToLocalStorage() {
+            localStorage.setItem('dispatchRules_v5', JSON.stringify(rules)); // Use new key
+            localStorage.setItem('dispatchCollapsedStates_v5', JSON.stringify(collapsedStates));
+            localStorage.setItem('dispatchLevelStopSettings_v5', JSON.stringify(levelStopSettings));
+        }
+
+        function loadStateFromLocalStorage() {
+            // Try loading new key first, then older keys for backward compatibility attempt
+            let storedRules = localStorage.getItem('dispatchRules_v5') || localStorage.getItem('dispatchRules_v4') || localStorage.getItem('dispatchRules_v3');
+            let storedStates = localStorage.getItem('dispatchCollapsedStates_v5') || localStorage.getItem('dispatchCollapsedStates_v4') || localStorage.getItem('dispatchCollapsedStates_v3');
+            let storedStopSettings = localStorage.getItem('dispatchLevelStopSettings_v5') || localStorage.getItem('dispatchLevelStopSettings_v4') || localStorage.getItem('dispatchLevelStopSettings_v3');
+
+            let loadedRules = storedRules ? JSON.parse(storedRules) : getDefaultRules();
+
+            // Clean up: Convert "<unspecified>" to "Any" and rename "skills" to "tags"
+            loadedRules.forEach(rule => {
+                // Rename skills to tags if necessary
+                if (rule.skills !== undefined && rule.tags === undefined) {
+                    rule.tags = rule.skills;
+                    delete rule.skills;
+                     console.log(`Converted rule ${rule.id} from skills to tags.`);
+                }
+                 // Ensure tags is always a string
+                 if (typeof rule.tags !== 'string') {
+                    rule.tags = '';
+                 }
+
+                // Convert <unspecified> conditions to Any
+                if (rule.conditions) {
+                    unspecifiedRuleMeansAnyKeys.forEach(key => {
+                        if (rule.conditions[key] === '<unspecified>') {
+                            // console.log(`Converting rule ${rule.id} condition ${key} from <unspecified> to Any.`);
+                            rule.conditions[key] = 'Any';
+                        }
+                    });
+                }
+            });
+
+            rules = loadedRules;
+            collapsedStates = storedStates ? JSON.parse(storedStates) : {};
+            levelStopSettings = storedStopSettings ? JSON.parse(storedStopSettings) : {};
+        }
+
+         // MODIFIED: Updated default rules with new attributes/tags
+         function getDefaultRules() {
+             return [
+                 { id: 'r1', sequenceLevel: 1, conditions: { site: 'Any', service: 'STAT', customer: 'Any', customerGroup: 'Marken', vehicleType: 'Any', orderPriority: 'Any' }, tags: 'TSA,Marken_Gold', active: true },
+                 { id: 'r2', sequenceLevel: 1, conditions: { site: 'Any', service: 'Any', customer: 'Any', customerGroup: 'Any', vehicleType: 'Box Truck', orderPriority: 'Any' }, tags: 'Dry_Ice', active: true },
+                 { id: 'r3', sequenceLevel: 2, conditions: { site: 'RA', service: 'Any', customer: '101710', customerGroup: 'Any', vehicleType: 'Any', orderPriority: 'VIP' }, tags: 'Dangerous_Goods', active: true },
+                 { id: 'r4', sequenceLevel: 3, conditions: { site: 'Any', service: 'Any', customer: 'Any', customerGroup: 'Option Care', vehicleType: 'Any', orderPriority: 'Any' }, tags: 'Option_Care', active: false },
+                 { id: 'r5', sequenceLevel: 3, conditions: { site: 'MF', service: 'Route', customer: 'Any', customerGroup: 'Any', vehicleType: 'Car', orderPriority: 'Normal' }, tags: 'Mercury_Orientation_Basic', active: true },
+             ];
+         }
+
+        // --- Rendering ---
+        function renderRuleList() {
+            sortableInstances.forEach(s => s.destroy()); sortableInstances = []; ruleListArea.innerHTML = '';
+            const groupedRules = rules.reduce((acc, rule) => { const level = rule.sequenceLevel; if (!acc[level]) acc[level] = []; acc[level].push(rule); return acc; }, {});
+            const sortedLevels = Object.keys(groupedRules).map(Number).sort((a, b) => a - b); const filterText = searchInput.value.toLowerCase().trim();
+            if (sortedLevels.length === 0) { ruleListArea.innerHTML = '<p>No rules defined yet.</p>'; return; }
+            sortedLevels.forEach(level => {
+                const groupDiv = document.createElement('div'); groupDiv.className = 'sequence-level-group'; groupDiv.dataset.level = level; const isCollapsed = collapsedStates[level] === true; if (isCollapsed) groupDiv.classList.add('collapsed');
+                const header = document.createElement('div'); header.className = 'sequence-level-header'; const stopSettingId = `stop-level-${level}`; const shouldStop = levelStopSettings[level] !== false;
+                header.innerHTML = `
+                    <span class="level-title" onclick="toggleCollapse(${level}, this.closest('.sequence-level-group'))">SEQUENCE ${level} <span class="toggle-icon">▼</span></span>
+                    <label for="${stopSettingId}"><input type="checkbox" id="${stopSettingId}" ${shouldStop ? 'checked' : ''} onchange="updateStopSetting(${level}, this.checked)"> Stop after this level if match found</label>`;
+                const rulesContainer = document.createElement('div'); rulesContainer.className = 'rules-container'; rulesContainer.dataset.levelContainer = level;
+                const filteredRules = groupedRules[level].filter(rule => { const conditionsString = formatConditions(rule.conditions); const searchableText = `${conditionsString} ${rule.tags}`.toLowerCase(); return !filterText || searchableText.includes(filterText);}); // Use rule.tags
+                 if (filteredRules.length > 0 || !filterText) {
+                    filteredRules.forEach(rule => { const ruleRow = createRuleRow(rule); rulesContainer.appendChild(ruleRow); });
+                    groupDiv.appendChild(header); groupDiv.appendChild(rulesContainer); ruleListArea.appendChild(groupDiv);
+                    const sortable = new Sortable(rulesContainer, { group: 'shared-rules', handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', onEnd: handleDragEnd });
+                    sortableInstances.push(sortable); } });
+        }
+
+        function createRuleRow(rule) { // Update to use tags
+             const ruleRow = document.createElement('div'); ruleRow.className = 'rule-row'; ruleRow.dataset.id = rule.id; if (!rule.active) ruleRow.classList.add('inactive');
+             const conditionsString = formatConditions(rule.conditions);
+             const tagsString = (rule.tags || '').split(',').map(tag => tag.trim()).filter(Boolean).map(tag => `<span class="tag">${tag}</span>`).join(' '); // Use rule.tags and .tag class
+             const ruleText = `IF ${conditionsString} -> Tags: ${tagsString || 'None'}`; // Updated label
+             ruleRow.innerHTML = `
+                 <span class="drag-handle" title="Drag to reorder/move level">⠿</span> <div class="rule-details">${ruleText}</div>
+                 <div class="rule-actions"><button onclick="toggleRuleActive('${rule.id}')" class="secondary">${rule.active ? 'Deactivate' : 'Activate'}</button> <button onclick="editRule('${rule.id}')" class="secondary">Edit</button> <button onclick="deleteRule('${rule.id}')" class="danger">Delete</button></div>`;
+             return ruleRow;
+        }
+        function formatConditions(conditions) { // No change needed
+             return conditionKeys.map(key => { const value = conditions[key]; if (value === 'Any' || value === undefined) return null; const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()); const displayValue = value === '<unspecified>' ? '&lt;unspecified&gt;' : value; return `<strong>${displayKey}:</strong> ${displayValue}`; }).filter(Boolean).join(', ') || 'Any Order';
+        }
+        function updateStopSetting(level, shouldStop) { levelStopSettings[level] = shouldStop; saveStateToLocalStorage(); }
+
+        // --- Event Handlers & Modal Logic ---
+        document.getElementById('add-rule-btn').onclick = openAddModal;
+        ruleForm.onsubmit = handleFormSubmit;
+        searchInput.oninput = renderRuleList;
+        document.getElementById('run-simulation-btn').onclick = runSimulation;
+
+        function handleDragEnd(evt) { // No change needed
+            const ruleId = evt.item.dataset.id; const newLevelContainer = evt.to; const newSequenceLevel = parseInt(newLevelContainer.dataset.levelContainer, 10); const ruleIndex = rules.findIndex(r => r.id === ruleId);
+            if (ruleIndex > -1 && !isNaN(newSequenceLevel)) { rules[ruleIndex].sequenceLevel = newSequenceLevel; rules.sort((a, b) => a.sequenceLevel - b.sequenceLevel); saveStateToLocalStorage(); renderRuleList(); }
+            else { console.error("Could not update sequence level on drag end."); renderRuleList(); }
+        }
+        function toggleCollapse(level, groupDiv) { // No change needed
+            if (!groupDiv) groupDiv = ruleListArea.querySelector(`.sequence-level-group[data-level="${level}"]`); if (groupDiv) { collapsedStates[level] = !collapsedStates[level]; groupDiv.classList.toggle('collapsed', collapsedStates[level]); saveStateToLocalStorage(); }
+        }
+        function toggleRuleActive(id) { // No change needed
+            const rule = rules.find(r => r.id === id); if (rule) { rule.active = !rule.active; saveStateToLocalStorage(); renderRuleList(); }
+        }
+
+        // MODIFIED: Updated editRule to populate tag multi-select
+        function editRule(id) {
+            const rule = rules.find(r => r.id === id);
+            if (rule) {
+                modalTitle.textContent = 'Edit Rule'; document.getElementById('rule-id').value = rule.id; document.getElementById('rule-sequence-level').value = rule.sequenceLevel;
+                conditionKeys.forEach(key => { const elementIdSuffix = conditionElementIds[key]; const elementId = `rule-${elementIdSuffix}`; const element = document.getElementById(elementId); if (element) { element.value = rule.conditions[key] !== undefined ? rule.conditions[key] : 'Any'; } });
+
+                // Populate tag multi-select
+                const selectedTags = (rule.tags || '').split(',').map(s => s.trim()).filter(Boolean);
+                for (const option of tagsSelectElement.options) {
+                    option.selected = selectedTags.includes(option.value);
+                }
+
+                modal.style.display = 'block';
+            }
+        }
+        function deleteRule(id) { if (confirm('Are you sure you want to delete this rule?')) { rules = rules.filter(r => r.id !== id); saveStateToLocalStorage(); renderRuleList(); } }
+
+        // MODIFIED: Updated openAddModal to clear tag multi-select
+        function openAddModal() {
+            modalTitle.textContent = 'Add New Rule'; ruleForm.reset(); document.getElementById('rule-id').value = ''; const maxLevel = rules.reduce((max, r) => Math.max(max, r.sequenceLevel), 0); document.getElementById('rule-sequence-level').value = rules.length > 0 ? maxLevel + 1 : 1;
+             conditionKeys.forEach(key => { const elementIdSuffix = conditionElementIds[key]; const elementId = `rule-${elementIdSuffix}`; const element = document.getElementById(elementId); if (element) element.value = 'Any'; });
+             // Clear tag multi-select
+             for (const option of tagsSelectElement.options) { option.selected = false; }
+            modal.style.display = 'block';
+        }
+
+        function closeModal() { modal.style.display = 'none'; }
+        window.onclick = function(event) { if (event.target == modal) closeModal(); }
+
+        // MODIFIED: Updated handleFormSubmit to read tag multi-select
+        function handleFormSubmit(event) {
+            event.preventDefault(); const id = document.getElementById('rule-id').value; const sequenceLevel = parseInt(document.getElementById('rule-sequence-level').value, 10);
+
+            // Read selected tags
+            const selectedTags = [];
+            for (const option of tagsSelectElement.options) { if (option.selected) { selectedTags.push(option.value); } }
+            if (selectedTags.length === 0) { alert('Please select at least one Tag.'); return; } // Validation
+            const tags = selectedTags.join(','); // Store as comma-separated string
+
+            if (isNaN(sequenceLevel) || sequenceLevel < 1) { alert('Please provide a valid Sequence Level (>= 1).'); return; }
+            const conditions = {}; conditionKeys.forEach(key => { const elementIdSuffix = conditionElementIds[key]; const elementId = `rule-${elementIdSuffix}`; conditions[key] = document.getElementById(elementId).value; });
+            // Use 'tags' instead of 'skills' in ruleData
+            const ruleData = { sequenceLevel, conditions, tags, active: true };
+            if (id) { const index = rules.findIndex(r => r.id === id); if (index > -1) rules[index] = { ...rules[index], ...ruleData }; }
+            else { ruleData.id = 'r' + Date.now(); rules.push(ruleData); }
+            rules.sort((a, b) => a.sequenceLevel - b.sequenceLevel); saveStateToLocalStorage(); closeModal(); renderRuleList();
+        }
+
+
+        // --- Simulation Logic (Renamed skill functions/vars to tag) ---
+        function runSimulation() { // Renamed vars, updated results label
+             const order = {};
+             conditionKeys.forEach(key => { const elementIdSuffix = conditionElementIds[key]; const elementId = `sim-${elementIdSuffix}`; const element = document.getElementById(elementId); if (element) { order[key] = element.value; } else { console.error(`Sim: ID ${elementId} not found`); order[key] = undefined; } });
+             const resultingTags = simulateTags(order); // Renamed function call
+             if (resultingTags.length > 0) {
+                 simulationResultsEl.innerHTML = resultingTags.map(tag => `<span class="tag">${tag}</span>`).join(' '); // Use .tag class
+             } else {
+                simulationResultsEl.textContent = 'No tags assigned.'; // Updated text
+             }
+        }
+
+        function simulateTags(orderAttributes) { // Renamed function and vars
+            const allAssignedTags = new Set(); // Renamed
+            const activeRules = rules.filter(rule => rule.active);
+            const groupedRules = activeRules.reduce((acc, rule) => { const level = rule.sequenceLevel; if (!acc[level]) acc[level] = []; acc[level].push(rule); return acc; }, {});
+            const sortedLevels = Object.keys(groupedRules).map(Number).sort((a, b) => a - b);
+
+            for (const level of sortedLevels) {
+                let levelMatchFound = false;
+                const tagsForThisLevel = new Set(); // Renamed
+                if (groupedRules[level]) {
+                    for (const rule of groupedRules[level]) {
+                        if (conditionsMatch(rule.conditions, orderAttributes)) {
+                            levelMatchFound = true;
+                            // Use rule.tags here
+                            (rule.tags || '').split(',').forEach(tag => {
+                                const trimmedTag = tag.trim(); // Renamed
+                                if (trimmedTag) tagsForThisLevel.add(trimmedTag);
+                            });
+                        }
+                    }
+                }
+                if (levelMatchFound) {
+                    tagsForThisLevel.forEach(tag => allAssignedTags.add(tag)); // Renamed vars
+                    const shouldStop = levelStopSettings[level] !== false;
+                    if (shouldStop) { return Array.from(allAssignedTags); } // Return accumulated tags
+                }
+            }
+            return Array.from(allAssignedTags); // Return accumulated tags
+        }
+
+        function conditionsMatch(ruleConditions, orderAttributes) { // No change needed
+             for (const key of conditionKeys) {
+                 const ruleValue = ruleConditions[key]; const orderValue = orderAttributes[key];
+                 if (orderValue === undefined) { console.error(`Error: Order attribute "${key}" undefined.`); return false; }
+                 if (ruleValue === undefined || ruleValue === 'Any') { continue; }
+                 if (ruleValue !== orderValue) { return false; } }
+            return true;
+        }
+
+
+        // --- Initial Load ---
+        loadStateFromLocalStorage();
+        renderRuleList();
+
+    </script>
+
+</body>
+</html>
